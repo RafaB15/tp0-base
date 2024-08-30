@@ -30,3 +30,13 @@ El comando `sh -c "echo '$mensaje' | nc server 12345" 2>/dev/null` tiene muchas 
 - ``2>/dev/null``: Redirijimos stderr para que en caso de que la red no se encuentre activa, se imprima solamente "action: test_echo_server | result: fail" en vez del error que nos lanza docker, para que los test automatizados no se vean perjudicados.
 
 Finalmente, si el último comando corrió bien ($? -eq 0) y la respuesta es igual al mensaje mandado, entonces imprimimos "action: test_echo_server | result: success". En caso contrario, imprimimos "action: test_echo_server | result: fail".
+
+# Ejercicio 4
+
+En el ejercicio 4 se escribieron mecanismos a través de los cuales el cliente y el servidor pueden manejar la señal SIGTERM para cerrar la conexión y poder terminar el programa de manera graceful. 
+
+Investigando, vi que la flag `-t` incluida en el comando del makefile `docker compose -f docker-compose-dev.yaml stop -t 1`, al pasarle el número 1, va a dar 1 segundo a nuestras aplicaciones para que puedan reaccionar al SIGTERM, antes de cerrarlas más forzosamente.
+
+En el servidor, se agregó un atributo para saber si ya recibimos la señal, de manera que si la recibimos dejaremos de aceptar nuevas conexiones. También, al recibir la señal tenemos configurado para que se ciuerre el socket en el que escuchamos por nuevas conexiones. En caso de que ya tuviérmamos una conexión abierta con un cliente al momento de recibir el SIGTERM (función handle client connection), entonces habrá un error y al tener un bloque finally, independientemente de si fue un éxito o un fracaso, se va a cerrar la conexión.
+
+En el cliente, cambiamos en algo la estructura de nuestro programa. Ahora el loop del cliente se ejecuta en una `go routine`, mientras que en el main thread se espera por una señal. En caso de recibir la señal antes de terminar la ejecución del cliente (usamos un select para ir por un camino o el otro) entonces se cierra el socket del cliente, cortándose el loop.
