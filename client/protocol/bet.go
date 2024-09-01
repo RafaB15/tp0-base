@@ -2,6 +2,8 @@ package protocol
 
 import (
 	"encoding/binary"
+	"errors"
+	"strconv"
 )
 
 const (
@@ -59,4 +61,44 @@ func (bet *Bet) ToBytes() []byte {
 	copy(finalBytes[2:], bytes)
 
 	return finalBytes
+}
+
+func NewBet(agenciaStr string, nombre string, apellido string, documento string, nacimiento string, numeroStr string) (*Bet, error) {
+	if nombre == "" {
+		return nil, errors.New("el nombre no puede estar vacío")
+	}
+
+	if apellido == "" {
+		return nil, errors.New("el apellido no puede estar vacío")
+	}
+
+	if documento == "" || len(documento) != 8 {
+		return nil, errors.New("el documento tiene que tener 8 caracteres")
+	}
+
+	if nacimiento == "" {
+		return nil, errors.New("el nacimiento no puede estar vacío")
+	}
+
+	numero, err := strconv.Atoi(numeroStr)
+	if err != nil {
+		return nil, errors.New("número inválido")
+	}
+
+	agencia, err := strconv.Atoi(agenciaStr)
+	if err != nil {
+		return nil, errors.New("agencia inválida")
+	}
+
+	bet := &Bet{
+		Agencia:    agencia,
+		Nombre:     nombre,
+		Apellido:   apellido,
+		Documento:  documento,
+		Nacimiento: nacimiento,
+		Numero:     numero,
+	}
+
+	return bet, nil
+
 }

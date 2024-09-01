@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 
@@ -57,23 +56,9 @@ func GetBet(agenciaStr string) (*protocol.Bet, error) {
 	nacimiento := os.Getenv("NACIMIENTO")
 
 	numeroStr := os.Getenv("NUMERO")
-	numero, err := strconv.Atoi(numeroStr)
+	bet, err := protocol.NewBet(agenciaStr, nombre, apellido, documento, nacimiento, numeroStr)
 	if err != nil {
 		return nil, err
-	}
-
-	agencia, err := strconv.Atoi(agenciaStr)
-	if err != nil {
-		return nil, err
-	}
-
-	bet := &protocol.Bet{
-		Agencia:    agencia,
-		Nombre:     nombre,
-		Apellido:   apellido,
-		Documento:  documento,
-		Nacimiento: nacimiento,
-		Numero:     numero,
 	}
 
 	return bet, nil
