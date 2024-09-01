@@ -1,7 +1,7 @@
 import csv
 import datetime
 import time
-
+import struct
 
 """ Bets storage location. """
 STORAGE_FILEPATH = "./bets.csv"
@@ -11,7 +11,7 @@ LOTTERY_WINNER_NUMBER = 7574
 
 """ A lottery bet registry. """
 class Bet:
-    def __init__(self, agency: str, first_name: str, last_name: str, document: str, birthdate: str, number: str):
+    def __init__(self, agency: str, first_name: str, last_name: str, document: str, birthdate: str, number: int):
         """
         agency must be passed with integer format.
         birthdate must be passed with format: 'YYYY-MM-DD'.
@@ -49,3 +49,68 @@ def load_bets() -> list[Bet]:
         for row in reader:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
 
+
+"""
+Function to write to a socket and ensure the written amount is as expected.
+Made to avoid short writes.
+"""
+def write_exact(socket, data):
+    sent_bytes = 0
+    while sent_bytes < len(data):
+        sent_bytes += socket.send(data[sent_bytes:])
+
+"""
+Function to read from a socket and ensure the read amount is as expected.
+Made to avoid short reads.
+"""
+def read_exact(socket, length):
+    data = bytearray()
+    while len(data) < length:
+        packet = socket.recv(length - len(data))
+        if not packet:
+            return None
+        data.extend(packet)
+    return data
+
+"""
+Function to deserialize a bet from a socket connection.
+Returns the deserialized bet in the form of a Bet object.
+"""
+def deserialize_bet(socket):
+    # Obtenemos el primer campo, con la totalidad del mensaje
+    total_lenght_bytes = read_exact(socket, 2)
+    total_length = struct.unpack('>H', total_lenght_bytes)[0]
+    
+    # Leemos el mensaje entero del buffer
+    data = read_exact(socket, total_length)
+    
+    # Leemos la agencia
+    agencia = data[0]
+    offset = 1
+    
+    # Obtenemos la longitud del nombre y la usamos para deserializarlo
+    nombre_len = data[offset]
+    offset += 1
+    nombre = data[offset:offset + nombre_len].decode('utf-8')
+    offset += nombre_len
+
+    # Obtenemos la longitud del apellido y la usamos para deserializarlo
+    apellido_len = data[offset]
+    offset += 1
+    
+    apellido = data[offset:offset + apellido_len].decode('utf-8')
+    offset += apellido_len
+        
+    # Obtenemos el DNI, el cual es un u32.
+    documento = data[offset:offset + 8].decode('utf-8')
+    offset += 8
+        
+    # Obtenemos la fecha de nacimiento en formato de string
+    nacimiento = data[offset:offset + 10].decode('utf-8')
+    offset += 10
+        
+    # Obtenemos el numero, el cual es un u16
+    numero = struct.unpack('>H', data[offset:offset + 2])[0]
+    offset += 2
+        
+    return Bet(agencia, nombre, apellido, documento, nacimiento, numero)

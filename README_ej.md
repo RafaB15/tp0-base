@@ -40,3 +40,25 @@ Investigando, vi que la flag `-t` incluida en el comando del makefile `docker co
 En el servidor, se agregó un atributo para saber si ya recibimos la señal, de manera que si la recibimos dejaremos de aceptar nuevas conexiones. También, al recibir la señal tenemos configurado para que se ciuerre el socket en el que escuchamos por nuevas conexiones. En caso de que ya tuviérmamos una conexión abierta con un cliente al momento de recibir el SIGTERM (función handle client connection), entonces habrá un error y al tener un bloque finally, independientemente de si fue un éxito o un fracaso, se va a cerrar la conexión.
 
 En el cliente, cambiamos en algo la estructura de nuestro programa. Ahora el loop del cliente se ejecuta en una `go routine`, mientras que en el main thread se espera por una señal. En caso de recibir la señal antes de terminar la ejecución del cliente (usamos un select para ir por un camino o el otro) entonces se cierra el socket del cliente, cortándose el loop.
+
+# Ejercicio 5
+
+Para este ejercicio tuvimos que cambiar el funcionamiento de tanto el cliente y el servidor, para que empiecen a hacer uso de la lógica de guardar apuestas.
+
+Para ello se definió el siguiente protocolo para que los clientes puedan mandar sus apuestas. En orden de serialización.
+
+- `Cantidad total de bytes`: Número de bytes totales del mensaje. Representado como un u16. Sirve para asegurarnos que al leer el mensaje no leamos partes del siguiente por error de formateo.
+- `Numero de agencia`: Se toma como número de agencia al ID del cliente. Se representa con un u8, ya que para nuestros propósitos tendremos 5 clientes.
+- `Longitud del nombre`: Longitud del nombre. Nos sirve para saber hasta donde leer. Representado por un u8, dado que los nombres con los que lidiaremos no superan los 255 caracteres.
+- `Nombre`: El nombre del que hace la apuesta,
+- `Longitud del apellido`: Longitud del apellido. Nos sirve para saber hasta donde leer. Representado por un u8, dado que los apellidos con los que lidiaremos no superan los 255 caracteres.
+- `Apellido`: El apellido del que hace la apuesta,
+- `Documento`: Un string de 8 caracteres. Es de tamaño fijo pues todos los DNI que tenemos en los archivos son de 8 caracteres (chequeado con el comando `cat agency-1.csv agency-2.csv agency-3.csv agency-4.csv agency-5.csv | awk -F',' '{print length($3)}' | uniq -`)
+- `Fecha`: Fecha con un string de la forma YYYY-MM-DD
+- `Número`: El número a apostar. Al ver que los valores en nuestro dataset van del 0 al 9999, decidí usar un u16 (`cat agency-1.csv agency-2.csv agency-3.csv agency-4.csv agency-5.csv | awk -F',' '{print $NF}' | sort -n | tail -1`)
+
+En nuestro programa se declararon las variables de entorno especificadas en el enunciado en el docler-compose-dev.yaml. El cliente las toma y las envía al servidor, quien deserializa la apuesta y si lo logra hacer, responde con un mensaje de confirmación. Al estar mandando solo un mensaje, decidí hacerlo simple y que el servidor envía un u8 con el valor 1 en caso de **éxito** y un u8 con el valor 0 en caso de **error**.
+
+Para este ejercicio no incluí cosas en el protocolo que tuvieran que ver con la agencia debido a que el enunciado no lo mencionó.
+
+Tanto en el cliente en Go como en el servidor en Python, se crearon funciones read exact y write exact, las cuales se encargaban de leer y escribir a un socket, asegurándose de que no se diera un short read o un short write.

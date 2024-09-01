@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/op/go-logging"
-	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/protocol"
 )
 
 var log = logging.MustGetLogger("log")
@@ -36,8 +36,6 @@ func InitConfig() (*viper.Viper, error) {
 	// Add env variables supported
 	v.BindEnv("id")
 	v.BindEnv("server", "address")
-	v.BindEnv("loop", "period")
-	v.BindEnv("loop", "amount")
 	v.BindEnv("log", "level")
 
 	// Try to read configuration from config file. If config file
@@ -49,13 +47,36 @@ func InitConfig() (*viper.Viper, error) {
 		fmt.Printf("Configuration could not be read from config file. Using env variables instead")
 	}
 
-	// Parse time.Duration variables and return an error if those variables cannot be parsed
+	return v, nil
+}
 
-	if _, err := time.ParseDuration(v.GetString("loop.period")); err != nil {
-		return nil, errors.Wrapf(err, "Could not parse CLI_LOOP_PERIOD env var as time.Duration.")
+func GetBet(agenciaStr string) (*protocol.Bet, error) {
+	nombre := os.Getenv("NOMBRE")
+	apellido := os.Getenv("APELLIDO")
+	documento := os.Getenv("DOCUMENTO")
+	nacimiento := os.Getenv("NACIMIENTO")
+
+	numeroStr := os.Getenv("NUMERO")
+	numero, err := strconv.Atoi(numeroStr)
+	if err != nil {
+		return nil, err
 	}
 
-	return v, nil
+	agencia, err := strconv.Atoi(agenciaStr)
+	if err != nil {
+		return nil, err
+	}
+
+	bet := &protocol.Bet{
+		Agencia:    agencia,
+		Nombre:     nombre,
+		Apellido:   apellido,
+		Documento:  documento,
+		Nacimiento: nacimiento,
+		Numero:     numero,
+	}
+
+	return bet, nil
 }
 
 // InitLogger Receives the log level to be set in go-logging as a string. This method
@@ -83,11 +104,9 @@ func InitLogger(logLevel string) error {
 // PrintConfig Print all the configuration parameters of the program.
 // For debugging purposes only
 func PrintConfig(v *viper.Viper) {
-	log.Infof("action: config | result: success | client_id: %s | server_address: %s | loop_amount: %v | loop_period: %v | log_level: %s",
+	log.Infof("action: config | result: success | client_id: %s | server_address: %s | log_level: %s",
 		v.GetString("id"),
 		v.GetString("server.address"),
-		v.GetInt("loop.amount"),
-		v.GetDuration("loop.period"),
 		v.GetString("log.level"),
 	)
 }
@@ -108,18 +127,22 @@ func main() {
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
-		LoopAmount:    v.GetInt("loop.amount"),
-		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
 	client := common.NewClient(clientConfig)
+
+	bet, err := GetBet(clientConfig.ID)
+	if err != nil {
+		log.Criticalf("%s", err)
+	}
+
 	done := make(chan bool)
 
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel, syscall.SIGTERM)
 
 	go func() {
-		client.StartClientLoop()
+		client.SendBet(bet)
 		close(done)
 	}()
 

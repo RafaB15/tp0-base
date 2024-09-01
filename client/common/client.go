@@ -1,11 +1,9 @@
 package common
 
 import (
-	"bufio"
-	"fmt"
 	"net"
-	"time"
 
+	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/protocol"
 	"github.com/op/go-logging"
 )
 
@@ -15,8 +13,6 @@ var log = logging.MustGetLogger("log")
 type ClientConfig struct {
 	ID            string
 	ServerAddress string
-	LoopAmount    int
-	LoopPeriod    time.Duration
 }
 
 // Client Entity that encapsulates how
@@ -50,42 +46,42 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-// StartClientLoop Send messages to the client until some time threshold is met
-func (c *Client) StartClientLoop() {
-	// There is an autoincremental msgID to identify every message sent
-	// Messages if the message amount threshold has not been surpassed
-	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
-		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
-
-		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
+// SendBetConn sends a bet to the server. If the initial write does not send all the bytes,
+// it continues writing the remaining bytes until all bytes are sent.
+func (c *Client) SendBetConn(bet *protocol.Bet) bool {
+	serializedBet := bet.ToBytes()
+	err := writeExact(c.conn, serializedBet)
+	if err != nil {
+		log.Errorf("action: apuesta_enviada | result: fail | client_id: %v | error: %v",
 			c.config.ID,
-			msgID,
-		)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
-		c.conn.Close()
-
-		if err != nil {
-			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-				c.config.ID,
-				err,
-			)
-			return
-		}
-
-		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-			c.config.ID,
-			msg,
-		)
-
-		// Wait a time between sending one message and the next one
-		time.Sleep(c.config.LoopPeriod)
-
+			err)
 	}
-	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+
+	// Espero confirmación del servidor
+	confirmation, err := readExact(c.conn, 1)
+	if err != nil {
+		log.Errorf("action: read_confirmation | result: fail | client_id: %v | error: %v",
+			c.config.ID,
+			err,
+		)
+		return false
+	}
+
+	if confirmation[0] == 1 {
+		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v", bet.Documento, bet.Numero)
+		return true
+	} else {
+		log.Infof("action: apuesta_enviada | result: fail | dni: %v | numero: %v", bet.Documento, bet.Numero)
+		return false
+	}
+}
+
+// SendBet takes a bet and sends it to the server. I wait to receive a confimfmation.
+func (c *Client) SendBet(bet *protocol.Bet) {
+	// Create the connection the server. Send an
+	c.createClientSocket()
+	c.SendBetConn(bet)
+	c.conn.Close()
 }
 
 func (c *Client) Shutdown() {
