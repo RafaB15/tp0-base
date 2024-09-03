@@ -12,19 +12,18 @@ func main() {
 
 	flag.Parse()
 
-	compose := fmt.Sprintf(`name: tp0
+	compose := `name: tp0
 services:
   server:
     container_name: server
     image: server:latest
     entrypoint: python3 /main.py
-    environment:
-      - PYTHONUNBUFFERED=%d
-      - LOGGING_LEVEL=DEBUG
     networks:
       - testing_net
+    volumes:
+      - ./server/config.ini:/config.ini
 
-`, *cantidad_de_clientes)
+`
 
 	for i := 1; i <= *cantidad_de_clientes; i++ {
 		nombre_cliente := fmt.Sprintf("client%d", i)
@@ -34,9 +33,15 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=%d
-      - CLI_LOG_LEVEL=DEBUG
+      - NOMBRE=Santiago Lionel
+      - APELLIDO=Lorca
+      - DOCUMENTO=30904465
+      - NACIMIENTO=1999-03-17
+      - NUMERO=7574
     networks:
       - testing_net
+    volumes:
+      - ./client/config.yaml:/config.yaml
     depends_on:
       - server
 
