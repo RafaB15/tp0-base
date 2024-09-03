@@ -4,13 +4,10 @@ services:
     container_name: server
     image: server:latest
     entrypoint: python3 /main.py
-    environment:
-      - PYTHONUNBUFFERED=5
-      - LOGGING_LEVEL=DEBUG
     networks:
       - testing_net
     volumes:
-      - ./server/config.ini:/app/config.ini
+      - ./server/config.ini:/config.ini
 
   client1:
     container_name: client1
@@ -18,12 +15,11 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=1
-      - CLI_LOG_LEVEL=DEBUG
       - AGENCIA=1
     networks:
       - testing_net
     volumes:
-      - ./client/config.yaml:/app/config.yaml
+      - ./client/config.yaml:/config.yaml
       - ./.data/dataset/agency-1.csv:/app/agency.csv
     depends_on:
       - server
@@ -34,12 +30,11 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=2
-      - CLI_LOG_LEVEL=DEBUG
       - AGENCIA=2
     networks:
       - testing_net
     volumes:
-      - ./client/config.yaml:/app/config.yaml
+      - ./client/config.yaml:/config.yaml
       - ./.data/dataset/agency-2.csv:/app/agency.csv
     depends_on:
       - server
@@ -50,12 +45,11 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=3
-      - CLI_LOG_LEVEL=DEBUG
       - AGENCIA=3
     networks:
       - testing_net
     volumes:
-      - ./client/config.yaml:/app/config.yaml
+      - ./client/config.yaml:/config.yaml
       - ./.data/dataset/agency-3.csv:/app/agency.csv
     depends_on:
       - server
@@ -66,12 +60,11 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=4
-      - CLI_LOG_LEVEL=DEBUG
       - AGENCIA=4
     networks:
       - testing_net
     volumes:
-      - ./client/config.yaml:/app/config.yaml
+      - ./client/config.yaml:/config.yaml
       - ./.data/dataset/agency-4.csv:/app/agency.csv
     depends_on:
       - server
@@ -82,12 +75,11 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=5
-      - CLI_LOG_LEVEL=DEBUG
       - AGENCIA=5
     networks:
       - testing_net
     volumes:
-      - ./client/config.yaml:/app/config.yaml
+      - ./client/config.yaml:/config.yaml
       - ./.data/dataset/agency-5.csv:/app/agency.csv
     depends_on:
       - server

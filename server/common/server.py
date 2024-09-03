@@ -43,6 +43,8 @@ class Server:
             store_bets(bets)
             logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
             self.__sendConfirmation(client_sock, len(bets))
+        except DeserializationError as e:
+            logging.error(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)}')
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:

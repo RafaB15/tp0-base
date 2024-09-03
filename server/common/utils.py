@@ -14,6 +14,16 @@ DOCUMENTO_LENGTH = 8
 NACIMIENTO_LENGTH = 10
 NUMERO_LENGTH = 2
 
+class DeserializationError(Exception):
+    def __init__(self, bets_deserialized):
+        super().__init__(f"Deserialization failed after {bets_deserialized} bets")
+        self.bets_deserialized = bets_deserialized
+
+class InvalidBetError(Exception):
+    """Exception raised for invalid bets."""
+    def __init__(self, message):
+        super().__init__(message)
+
 """ A lottery bet registry. """
 class Bet:
     def __init__(self, agency: str, first_name: str, last_name: str, document: str, birthdate: str, number: int):
@@ -22,12 +32,32 @@ class Bet:
         birthdate must be passed with format: 'YYYY-MM-DD'.
         number must be passed with integer format.
         """
-        self.agency = int(agency)
+        try:
+            self.agency = int(agency)
+        except ValueError:
+            raise InvalidBetError(f"Invalid agency: {agency}. Must be an integer.")
+
+        if not first_name:
+            raise InvalidBetError("First name cannot be empty.")
         self.first_name = first_name
+
+        if not last_name:
+            raise InvalidBetError("Last name cannot be empty.")
         self.last_name = last_name
+
+        if not document:
+            raise InvalidBetError("Document cannot be empty.")
         self.document = document
-        self.birthdate = datetime.date.fromisoformat(birthdate)
-        self.number = int(number)
+
+        try:
+            self.birthdate = datetime.date.fromisoformat(birthdate)
+        except ValueError:
+            raise InvalidBetError(f"Invalid birthdate: {birthdate}. Must be in 'YYYY-MM-DD' format.")
+
+        try:
+            self.number = int(number)
+        except ValueError:
+            raise InvalidBetError(f"Invalid number: {number}. Must be an integer.")
 
 """ Checks whether a bet won the prize or not. """
 def has_won(bet: Bet) -> bool:
@@ -116,13 +146,16 @@ def deserialize_bet(socket):
     # Obtenemos el numero, el cual es un u16
     numero = struct.unpack('>H', data[offset:offset + NUMERO_LENGTH])[0]
     offset += NUMERO_LENGTH
-        
+    
     return Bet(agencia, nombre, apellido, documento, nacimiento, numero)
 
 def deserialize_bets(socket):
     amount_of_bets = read_exact(socket, 1)[0]
     bets = []
     for i in range(amount_of_bets):
-        bet = deserialize_bet(socket)
-        bets.append(bet)
+        try:
+            bet = deserialize_bet(socket)
+            bets.append(bet)
+        except InvalidBetError:
+            raise DeserializationError(i)
     return bets
