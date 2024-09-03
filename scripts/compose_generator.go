@@ -23,6 +23,8 @@ services:
       - LOGGING_LEVEL=DEBUG
     networks:
       - testing_net
+    volumes:
+      - ./server/config.ini:/app/config.ini
 
 `, *cantidad_de_clientes)
 
@@ -37,6 +39,8 @@ services:
       - CLI_LOG_LEVEL=DEBUG
     networks:
       - testing_net
+    volumes:
+      - ./client/config.yaml:/app/config.yaml
     depends_on:
       - server
 
