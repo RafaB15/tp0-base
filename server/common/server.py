@@ -16,8 +16,6 @@ class Server:
         
     def run(self):
         """
-        Dummy Server loop
-
         Server that accept a new connections and establishes a
         communication with a client. After client with communucation
         finishes, servers starts to accept new connections again
@@ -39,19 +37,19 @@ class Server:
         client socket will also be closed
         """
         try:
-            bet = deserialize_bet(client_sock)
+            bets = deserialize_bets(client_sock)
             addr = client_sock.getpeername()
             logging.info(f'action: receive_message | result: success | ip: {addr[0]}')
-            store_bets([bet])
-            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
-            self.__sendConfirmation(client_sock)
+            store_bets(bets)
+            logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
+            self.__sendConfirmation(client_sock, len(bets))
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
             client_sock.close()
 
-    def __sendConfirmation(self, socket):
-        confirmation = struct.pack('>B', 1)
+    def __sendConfirmation(self, socket, amount_read):
+        confirmation = struct.pack('>B', amount_read)
         write_exact(socket, confirmation)
     
     def __accept_new_connection(self):

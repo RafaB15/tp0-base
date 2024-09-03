@@ -8,6 +8,11 @@ STORAGE_FILEPATH = "./bets.csv"
 """ Simulated winner number in the lottery contest. """
 LOTTERY_WINNER_NUMBER = 7574
 
+TOTAL_LENGTH_BYTES = 2
+AGENCIA_OFFSET = 1
+DOCUMENTO_LENGTH = 8
+NACIMIENTO_LENGTH = 10
+NUMERO_LENGTH = 2
 
 """ A lottery bet registry. """
 class Bet:
@@ -78,15 +83,15 @@ Returns the deserialized bet in the form of a Bet object.
 """
 def deserialize_bet(socket):
     # Obtenemos el primer campo, con la totalidad del mensaje
-    total_lenght_bytes = read_exact(socket, 2)
-    total_length = struct.unpack('>H', total_lenght_bytes)[0]
+    total_length_bytes = read_exact(socket, TOTAL_LENGTH_BYTES)
+    total_length = struct.unpack('>H', total_length_bytes)[0]
     
     # Leemos el mensaje entero del buffer
     data = read_exact(socket, total_length)
     
     # Leemos la agencia
     agencia = data[0]
-    offset = 1
+    offset = AGENCIA_OFFSET
     
     # Obtenemos la longitud del nombre y la usamos para deserializarlo
     nombre_len = data[offset]
@@ -97,20 +102,27 @@ def deserialize_bet(socket):
     # Obtenemos la longitud del apellido y la usamos para deserializarlo
     apellido_len = data[offset]
     offset += 1
-    
     apellido = data[offset:offset + apellido_len].decode('utf-8')
     offset += apellido_len
         
     # Obtenemos el DNI, el cual es un u32.
-    documento = data[offset:offset + 8].decode('utf-8')
-    offset += 8
+    documento = data[offset:offset + DOCUMENTO_LENGTH].decode('utf-8')
+    offset += DOCUMENTO_LENGTH
         
     # Obtenemos la fecha de nacimiento en formato de string
-    nacimiento = data[offset:offset + 10].decode('utf-8')
-    offset += 10
+    nacimiento = data[offset:offset + NACIMIENTO_LENGTH].decode('utf-8')
+    offset += NACIMIENTO_LENGTH
         
     # Obtenemos el numero, el cual es un u16
-    numero = struct.unpack('>H', data[offset:offset + 2])[0]
-    offset += 2
+    numero = struct.unpack('>H', data[offset:offset + NUMERO_LENGTH])[0]
+    offset += NUMERO_LENGTH
         
     return Bet(agencia, nombre, apellido, documento, nacimiento, numero)
+
+def deserialize_bets(socket):
+    amount_of_bets = read_exact(socket, 1)[0]
+    bets = []
+    for i in range(amount_of_bets):
+        bet = deserialize_bet(socket)
+        bets.append(bet)
+    return bets

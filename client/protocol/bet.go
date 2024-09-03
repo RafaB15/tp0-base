@@ -63,7 +63,17 @@ func (bet *Bet) ToBytes() []byte {
 	return finalBytes
 }
 
-func NewBet(agenciaStr string, nombre string, apellido string, documento string, nacimiento string, numeroStr string) (*Bet, error) {
+func SerializeBetBatch(betBatch []*Bet) []byte {
+	serialized := []byte{byte(len(betBatch))}
+
+	for _, bet := range betBatch {
+		serialized = append(serialized, bet.ToBytes()...)
+	}
+
+	return serialized
+}
+
+func NewBet(agencia int, nombre string, apellido string, documento string, nacimiento string, numeroStr string) (*Bet, error) {
 	if nombre == "" {
 		return nil, errors.New("el nombre no puede estar vacío")
 	}
@@ -83,11 +93,6 @@ func NewBet(agenciaStr string, nombre string, apellido string, documento string,
 	numero, err := strconv.Atoi(numeroStr)
 	if err != nil {
 		return nil, errors.New("número inválido")
-	}
-
-	agencia, err := strconv.Atoi(agenciaStr)
-	if err != nil {
-		return nil, errors.New("agencia inválida")
 	}
 
 	bet := &Bet{

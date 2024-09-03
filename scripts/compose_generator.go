@@ -23,6 +23,8 @@ services:
       - LOGGING_LEVEL=DEBUG
     networks:
       - testing_net
+    volumes:
+      - ./server/config.ini:/app/config.ini
 
 `, *cantidad_de_clientes)
 
@@ -35,12 +37,16 @@ services:
     environment:
       - CLI_ID=%d
       - CLI_LOG_LEVEL=DEBUG
+      - AGENCIA=%d
     networks:
       - testing_net
+    volumes:
+      - ./client/config.yaml:/app/config.yaml
+      - ./.data/dataset/agency-%d.csv:/app/agency.csv
     depends_on:
       - server
 
-`, nombre_cliente, nombre_cliente, i)
+`, nombre_cliente, nombre_cliente, i, i, i)
 	}
 
 	compose += `networks:

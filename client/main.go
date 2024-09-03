@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -11,7 +12,10 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
-	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/protocol"
+)
+
+const (
+	PathBets = "./app/agency.csv"
 )
 
 var log = logging.MustGetLogger("log")
@@ -36,6 +40,7 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("id")
 	v.BindEnv("server", "address")
 	v.BindEnv("log", "level")
+	v.BindEnv("batch", "maxAmount")
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -47,21 +52,6 @@ func InitConfig() (*viper.Viper, error) {
 	}
 
 	return v, nil
-}
-
-func GetBet(agenciaStr string) (*protocol.Bet, error) {
-	nombre := os.Getenv("NOMBRE")
-	apellido := os.Getenv("APELLIDO")
-	documento := os.Getenv("DOCUMENTO")
-	nacimiento := os.Getenv("NACIMIENTO")
-
-	numeroStr := os.Getenv("NUMERO")
-	bet, err := protocol.NewBet(agenciaStr, nombre, apellido, documento, nacimiento, numeroStr)
-	if err != nil {
-		return nil, err
-	}
-
-	return bet, nil
 }
 
 // InitLogger Receives the log level to be set in go-logging as a string. This method
@@ -89,11 +79,22 @@ func InitLogger(logLevel string) error {
 // PrintConfig Print all the configuration parameters of the program.
 // For debugging purposes only
 func PrintConfig(v *viper.Viper) {
-	log.Infof("action: config | result: success | client_id: %s | server_address: %s | log_level: %s",
+	log.Infof("action: config | result: success | client_id: %s | server_address: %s | log_level: %s | batch_max_amount: %d",
 		v.GetString("id"),
 		v.GetString("server.address"),
 		v.GetString("log.level"),
+		v.GetInt("batch.maxAmount"),
 	)
+}
+
+// Get the value of Agencia from the environment variable and attempts to parse it into an integer
+func GetAgencia() (int, error) {
+	agenciaStr := os.Getenv("AGENCIA")
+	agencia, err := strconv.Atoi(agenciaStr)
+	if err != nil {
+		return 0, err
+	}
+	return agencia, nil
 }
 
 func main() {
@@ -112,14 +113,15 @@ func main() {
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
+		BatchSize:     v.GetInt("batch.maxAmount"),
 	}
 
-	client := common.NewClient(clientConfig)
-
-	bet, err := GetBet(clientConfig.ID)
+	agencia, err := GetAgencia()
 	if err != nil {
 		log.Criticalf("%s", err)
 	}
+
+	client := common.NewClient(clientConfig)
 
 	done := make(chan bool)
 
@@ -127,7 +129,7 @@ func main() {
 	signal.Notify(signalChannel, syscall.SIGTERM)
 
 	go func() {
-		client.SendBet(bet)
+		client.SendBets(PathBets, agencia)
 		close(done)
 	}()
 

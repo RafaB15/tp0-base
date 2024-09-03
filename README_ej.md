@@ -62,3 +62,19 @@ En nuestro programa se declararon las variables de entorno especificadas en el e
 Para este ejercicio no incluí cosas en el protocolo que tuvieran que ver con la agencia debido a que el enunciado no lo mencionó.
 
 Tanto en el cliente en Go como en el servidor en Python, se crearon funciones read exact y write exact, las cuales se encargaban de leer y escribir a un socket, asegurándose de que no se diera un short read o un short write.
+
+# Ejercicio 6
+
+Para este ejercicio, se extendió el protocolo para que ahora las apuestas no se manden de a una, sino que podamos mandar muchas apuestas juntas.
+
+Se descomprimieron los archivos *csv*, quedando estos en ``.data/dataset/``. Cada archivo corresponde a una agencia, de manera que vamos a tener un cliente por agencia, el cual leerá su archivo csv y mandará las apuestas en batches de máximo batch.maxAmount (establecido en config.yaml). 
+
+Para que estos csv tan grandes no se estén copiando, decidí hacerles un bind mount, mappeando para cada cliente diferente el archivo con el csv a /app/agency.csv. De manera que todos los clientes van a sacar sus datos de agency.csv y su número de agencia de la variable de entorno AGENCIA. En el ejercicio pasado utilicé el id del cliente, pero ahora que tendremos muchas agencias, preferí separarlo en su propia varable También se actualizó el *generar-compose.sh* del ejercicio 1 para que agregue los volúmenes necesarios.
+
+Cada cliente va a leer su archivo csv correspondiente y va a tomar tantas apuestas como las que definimos en el archivo de configuración. La manera de serializarlos es la misma que ne el ejercicio anterior, pero ahora pondremos al principio un `u8` que nos indicará la cantidad de apuestas que estamos mandando. El enunciado especifica que los batches no deberían superar los 8 KB, por lo que hice unos cálculos para verificar que con los datos que tenemos no superarmemos esa cantidad. 
+
+Las únicas cantidades de datos variables en nuestro protocolo son los nombres y apellidos, pero usando los comandos `cat agency-1.csv agency-2.csv agency-3.csv agency-4.csv agency-5.csv | awk -F',' '{print length($1)}' | sort -n | tail -1` y `cat agency-1.csv agency-2.csv agency-3.csv agency-4.csv agency-5.csv | awk -F',' '{print length($2)}' | sort -n | tail -1` vemos que los nombres y apellidos con mayor tamaño son de 23 y 10 caracteres respectivamente.
+
+Debido a esto, podemos estimar que cada apuesta, en el peor escenario será de 60 bytes. Para no pasarnos de la cantidad establecida, se mandarán batches de 130 apuestas como máximo.
+
+El servidor por su parte va a leer primero la cantidad de apuestas que tiene que procesar y las va a deserializar a cada una como ya lo venía haciendo.
