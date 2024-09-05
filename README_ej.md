@@ -83,6 +83,6 @@ El servidor por su parte va a leer primero la cantidad de apuestas que tiene que
 
 Para este ejercicio se extendió otra vez el protocolo para incluir al inicio un header `u8` que representa el tipo de mensaje, siendo 1 un mensaje que manda apuestas, mientras que 2 va a representar la pedida de los ganadores. Este mensaje, además del header, va a inlcuir otro u8 con el número de agencia, para saber por cual se está pidiendo. 
 
-El servidor toma el número que definimos por configuración de listen backlog como la cantidad de clientes por los que va a esperar, entonces al momento que las 5 agencias mandaron un mensaje, este va a enviarle a cada uno los ganadores del sorteo.
+El servidor toma el número que definimos por en el compose como EXPECTED_CLIENTS como la cantidad de clientes por los que va a esperar, entonces al momento que las 5 agencias mandaron un mensaje, este va a enviarle a cada uno los ganadores del sorteo.
 
 Al recibir los mensajes pidiendo ganadores antes de terminar con los clientes, el servidor no va a responder todavía y va a guardarse la conección tcp para responder luego. Al llegarle un pedido de todas las agencias, va a recorrer las apuestas y generar listas de ganadores por agencia.
