@@ -130,6 +130,7 @@ func main() {
 
 	go func() {
 		client.SendBets(PathBets, agencia)
+		client.GetWinners(agencia)
 		close(done)
 	}()
 

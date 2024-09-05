@@ -7,12 +7,13 @@ import (
 )
 
 const (
-	AgenciaLength    = 1
-	NombreLength     = 1
-	ApellidoLength   = 1
-	DocumentoLength  = 8
-	NacimientoLength = 10
-	NumeroLength     = 2
+	AgenciaLength        = 1
+	NombreLength         = 1
+	ApellidoLength       = 1
+	DocumentoLength      = 8
+	NacimientoLength     = 10
+	NumeroLength         = 2
+	BetMessageIdentifier = 1
 )
 
 type Bet struct {
@@ -64,7 +65,7 @@ func (bet *Bet) ToBytes() []byte {
 }
 
 func SerializeBetBatch(betBatch []*Bet) []byte {
-	serialized := []byte{byte(len(betBatch))}
+	serialized := []byte{BetMessageIdentifier, byte(len(betBatch))}
 
 	for _, bet := range betBatch {
 		serialized = append(serialized, bet.ToBytes()...)

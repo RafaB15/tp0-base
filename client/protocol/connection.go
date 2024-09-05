@@ -1,11 +1,11 @@
-package common
+package protocol
 
 import (
 	"errors"
 	"net"
 )
 
-func writeExact(conn net.Conn, data []byte) error {
+func WriteExact(conn net.Conn, data []byte) error {
 	sentBytes := 0
 	for sentBytes < len(data) {
 		n, err := conn.Write(data[sentBytes:])
@@ -17,7 +17,7 @@ func writeExact(conn net.Conn, data []byte) error {
 	return nil
 }
 
-func readExact(conn net.Conn, length int) ([]byte, error) {
+func ReadExact(conn net.Conn, length int) ([]byte, error) {
 	data := make([]byte, length)
 	readBytes := 0
 
