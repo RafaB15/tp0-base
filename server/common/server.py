@@ -8,13 +8,13 @@ BETS_MESSAGE = 1
 WINNERS_REQUEST_MESSAGE = 2
 
 class Server:
-    def __init__(self, port, listen_backlog):
+    def __init__(self, port, listen_backlog, expected_clients):
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self._received_sigterm = False
-        self._expected_clients = listen_backlog
+        self._expected_clients = expected_clients
         self._waiting_clients = {}
 
         signal.signal(signal.SIGTERM, self.shutdown)

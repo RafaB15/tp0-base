@@ -6,6 +6,8 @@ services:
     entrypoint: python3 /main.py
     networks:
       - testing_net
+    environment:
+      - EXPECTED_CLIENTS=5
     volumes:
       - ./server/config.ini:/config.ini
 
