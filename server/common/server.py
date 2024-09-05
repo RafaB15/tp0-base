@@ -2,7 +2,10 @@ import socket
 import logging
 import signal
 from common.utils import *
+from common.worker import Worker
+from common.coordinator import Coordinator
 import struct
+import multiprocessing
 
 BETS_MESSAGE = 1
 WINNERS_REQUEST_MESSAGE = 2
@@ -16,6 +19,7 @@ class Server:
         self._received_sigterm = False
         self._expected_clients = listen_backlog
         self._waiting_clients = {}
+        self._processHandlers = []
 
         signal.signal(signal.SIGTERM, self.shutdown)
         
@@ -26,26 +30,36 @@ class Server:
         finishes, servers starts to accept new connections again
         """
 
-        while (not self._received_sigterm) and (len(self._waiting_clients) < self._expected_clients):
+        # Hacemos una barrera para sincronizar a los manejadores de clientes con el encargado de hacer el sorteo
+        barrier = multiprocessing.Barrier(self._expected_clients + 1)
+        
+        # Hacemos un lock con el que sincronizaremos las llamadas a la función de store bets
+        lock = multiprocessing.Lock()
+        
+        # Hacemos una queue con la que mandaremos información de los resultados del sorteo a los diferentes procesos
+        queue = multiprocessing.Queue()
+
+        coordinator_process = multiprocessing.Process(target=coordinate_clients, args=(self._expected_clients, barrier, queue))
+        coordinator_process.start()
+
+        current_clients = 0
+        while (not self._received_sigterm) and (current_clients < self._expected_clients):
             try:
                 client_sock = self.__accept_new_connection()
-                message_type = self.__get_message_type(client_sock)
-                if message_type == BETS_MESSAGE:
-                    self.__handle_bets_message(client_sock)
-                else:
-                    self.__handle_winners_request_message(client_sock)
+                current_clients += 1
+                p = multiprocessing.Process(target=handle_client, args=(client_sock, barrier, lock, queue))
+                p.start()
+                self._processHandlers.append(p)
             except OSError as e:
                 logging.error(f"action: run_server | result: fail | error: {e}")
                 return
         
         logging.info("action: sorteo | result: success")
         
-        try:
-            self.__send_winners()
-        except OSError as e:
-            logging.error(f"action: run_server | result: fail | error: {e}")
-            return
-        
+        coordinator_process.join()
+        for p in self._processHandlers:
+            p.join()
+
     def __get_message_type(self, client_sock):
         return read_exact(client_sock, 1)[0]
 
@@ -135,3 +149,11 @@ class Server:
         self._received_sigterm = True
         self._server_socket.close()
         logging.info('action: shutdown server | result: success')
+
+def handle_client(client_sock, barrier, lock, queue):
+    worker = Worker()
+    worker.handle_client(client_sock, barrier, lock, queue)
+    
+def coordinate_clients(expected_clients, barrier, queue):
+    coordinator = Coordinator()
+    coordinator.send_winners(expected_clients, barrier, queue)

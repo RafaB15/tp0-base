@@ -57,14 +57,8 @@ func (c *Client) createClientSocket() error {
 
 // Send a batch of bets through the socket. I serializes them, sends them and then waits for confirmation.
 func (c *Client) SendBetBatch(betBatch []*p.Bet) error {
-	err := c.createClientSocket()
-	defer c.conn.Close()
-	if err != nil {
-		return err
-	}
-
 	serializedBets := p.SerializeBetBatch(betBatch)
-	err = p.WriteExact(c.conn, serializedBets)
+	err := p.WriteExact(c.conn, serializedBets)
 	if err != nil {
 		return err
 	}
@@ -164,21 +158,12 @@ func (c *Client) SendBets(pathBets string, agencia int) {
 }
 
 func (c *Client) GetWinners(agencia int) {
-	err := c.createClientSocket()
-
-	defer c.conn.Close()
-
-	if err != nil {
-		log.Errorf("action: connecting_server | result: fail | error %v", err)
-		return
-	}
-
 	request := p.Request{
 		Agencia: agencia,
 	}
 
 	serializedRequest := request.ToBytes()
-	err = p.WriteExact(c.conn, serializedRequest)
+	err := p.WriteExact(c.conn, serializedRequest)
 	if err != nil {
 		log.Errorf("action: serialize_request | result: fail | error %v", err)
 		return
@@ -191,6 +176,18 @@ func (c *Client) GetWinners(agencia int) {
 	}
 
 	log.Infof("action: consulta_ganadores | result: success | cant_ganadores %d", len(winners.Documentos))
+}
+
+func (c *Client) GetBetsResults(pathBets string, agencia int) {
+	err := c.createClientSocket()
+	defer c.conn.Close()
+	if err != nil {
+		log.Errorf("action: connect_to_server | result: fail | error: %v", err)
+	}
+
+	c.SendBets(pathBets, agencia)
+
+	c.GetWinners(agencia)
 }
 
 // Closes the connection of the client

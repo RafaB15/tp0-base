@@ -86,3 +86,25 @@ Para este ejercicio se extendió otra vez el protocolo para incluir al inicio un
 El servidor toma el número que definimos por configuración de listen backlog como la cantidad de clientes por los que va a esperar, entonces al momento que las 5 agencias mandaron un mensaje, este va a enviarle a cada uno los ganadores del sorteo.
 
 Al recibir los mensajes pidiendo ganadores antes de terminar con los clientes, el servidor no va a responder todavía y va a guardarse la conección tcp para responder luego. Al llegarle un pedido de todas las agencias, va a recorrer las apuestas y generar listas de ganadores por agencia.
+
+# Ejercicio 8
+
+Para este ejercicio tenemos que poder procesar mensajes en paralelo. Para esto tendremos que hacer varios cambios en como funciona nuestra aplicación.
+
+Para lograr esto vamos a hacer uso del módulo de multiprocessing en python. No usaré el de threading debido a que este se ve limitado por el ``GIL`` (Global Interpreter Lock), el cual ocasiona que un proceso solo pueda tener un thread ejecutando código a la vez, independientemente de cuantos threads tengamos en nuestro proceso. El módulo de multiprocessing tiene una API bastante similar y, en vez de usar threads en un mismo proceso, genera procesos nuevos, evitando las limitaciones del GIL.
+
+Un primer cambio que planeo hacer es tener conexiones constantes. Dado que vamos a paralelizar las operaciones, puedo tener un proceso por cliente, de manera que no tiene sentido cerrar y volver a abrir la conexión como hacíamos en ejercicios anteriores para que se turnaras los clientes.
+
+En el servidor vamos a tener un proceso por cada cliente. En estos procesos se van a transmitir las apuestas y se usará un lock para controlar el acceso a la función load bets, de manera que no hayan dos procesos intentando acceder a esta en simultaneo y así no tener problemas a la hora de escribir al archivo.
+
+Al mismo tiempo, haremos uso de una barrera y una cola para sincronizar a nuestros procesos y que estos sepan cuando empezar con el sorteo. Tendremos un proceso al que llamé coordinador (probablemente no sea un nombre muy apropiado), el cual apenas empieza se pone a esperar en una barrera. Cuando a los procesos que manejan las conexiones con los clientes les llegue el mensaje pidiendo los resultados del sorteo, estos también esperarán en la barrera. Cuando CANT_PROCESOS + 1 estén esperando en la barrera esta se desbloquea. Acto seguido, el proceso coordinador se encarga de leer el archivo con load bets (es el único proceso que lo estará haciendo en ese momento) y calcula los ganadores. Luego los pasa a través de una cola a los diferentes procesos, los cuales se fijan en los resultados de su agencia y devuelven ese resultado al cliente.
+
+De esta manera nos aseguramos de que 
+1. Se paralelicen adecuadamente las operaciones por cliente.
+2. Se modifique de a uno el archivo con las apuestas
+3. Se sincronicen los procesos para que el sorteo se realice cuando finalizaron todos.
+4. Se reciban los resultados de las apuestas y se comuniquen al cliente final.
+
+Si tuviéramos 2 clientes, tendríamos los siguientes procesos
+
+![Diagrama procesos](img/TP0_diagram.png)

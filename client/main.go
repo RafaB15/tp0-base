@@ -129,8 +129,7 @@ func main() {
 	signal.Notify(signalChannel, syscall.SIGTERM)
 
 	go func() {
-		client.SendBets(PathBets, agencia)
-		client.GetWinners(agencia)
+		client.GetBetsResults(PathBets, agencia)
 		close(done)
 	}()
 
