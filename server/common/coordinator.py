@@ -1,5 +1,4 @@
 from common.utils import *
-import logging
 
 class Coordinator:
     def send_winners(self, expected_clients, barrier, queue):

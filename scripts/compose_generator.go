@@ -12,7 +12,7 @@ func main() {
 
 	flag.Parse()
 
-	compose := `name: tp0
+	compose := fmt.Sprintf(`name: tp0
 services:
   server:
     container_name: server
@@ -20,10 +20,11 @@ services:
     entrypoint: python3 /main.py
     networks:
       - testing_net
+    environment:
+      - EXPECTED_CLIENTS=%d
     volumes:
       - ./server/config.ini:/config.ini
-
-`
+`, *cantidad_de_clientes)
 
 	for i := 1; i <= *cantidad_de_clientes; i++ {
 		nombre_cliente := fmt.Sprintf("client%d", i)

@@ -1,6 +1,5 @@
 import csv
 import datetime
-import time
 import struct
 
 """ Bets storage location. """
