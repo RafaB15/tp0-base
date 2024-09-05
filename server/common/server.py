@@ -30,7 +30,6 @@ class Server:
             try:
                 client_sock = self.__accept_new_connection()
                 message_type = self.__get_message_type(client_sock)
-                logging.debug(f"debuguainding {message_type}")
                 if message_type == BETS_MESSAGE:
                     self.__handle_bets_message(client_sock)
                 else:
